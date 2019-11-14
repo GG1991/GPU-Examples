@@ -254,7 +254,7 @@ int main(int argc, char **argv)
 	cout << "time_init = " << duration.count() << " ms" << endl;
 
 	duration = duration_cast<milliseconds>(time_3 - time_2);
-	cout << "time_init = " << duration.count() << " ms" << endl;
+	cout << "time_assembly = " << duration.count() << " ms" << endl;
 
 	return 0;
 }
