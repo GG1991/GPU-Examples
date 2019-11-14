@@ -1,1 +1,3 @@
-main-cpu
+.gdb_history
+main-gcc-debug
+main-gcc-opt
