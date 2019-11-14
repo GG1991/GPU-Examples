@@ -63,7 +63,7 @@ void get_elem_displ(const double *u, double elem_disp[npe * dim], const int nx, 
 	}
 }
 
-#pragma acc routine seq
+//#pragma acc routine seq
 void get_strain(const double *u, int gp, double *strain_gp, const int nx, const int ny, const int nz, int ex, int ey, int ez)
 {
 	double elem_disp[npe * dim];
@@ -139,7 +139,7 @@ int main(int argc, char **argv)
 
 	auto time_2 = high_resolution_clock::now();
 
-#pragma acc parallel loop copy(eps[:nex*ney*nez*npe*6]) copyin(u[:nndim])
+//#pragma acc parallel loop copy(eps[:nex*ney*nez*npe*6]) copyin(u[:nndim], bmat_cache[:ngp][:nvoi][:npe * dim])
 	for (int ex = 0; ex < nex; ++ex) {
 		for (int ey = 0; ey < ney; ++ey) {
 			for (int ez = 0; ez < nez; ++ez) {
