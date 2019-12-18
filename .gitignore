@@ -3,3 +3,5 @@ main-gcc-debug
 main-gcc-opt
 main-pgi-cpu
 main-pgi-gpu
+
+*~
