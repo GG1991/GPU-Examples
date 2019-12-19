@@ -171,24 +171,44 @@ int main(int argc, char **argv)
 
 	double * u = new double[nndim];
 
-	ell_matrix A;  // Matrix
 	const int ns[DIM] = { nx, ny, nz };
-	ell_init(&A, DIM, DIM, ns, CG_ABS_TOL, CG_REL_TOL, CG_MAX_ITS);
+#ifdef CPU
+	ell_matrix A_cpu;  // Matrix
+	ell_init(&A_cpu, DIM, DIM, ns, CG_ABS_TOL, CG_REL_TOL, CG_MAX_ITS);
+#endif
+#ifdef GPU
+	ell_matrix A_gpu;  // Matrix
+	ell_init(&A_gpu, DIM, DIM, ns, CG_ABS_TOL, CG_REL_TOL, CG_MAX_ITS);
+#endif
 
 	auto time_2 = high_resolution_clock::now();
 
-#ifndef GPU
+#ifdef CPU
 	cout << "CPU case" << endl;
-	assembly_mat(&A, u);
-#else
+	assembly_mat(&A_cpu, u);
+#endif
+#ifdef GPU
 	cout << "GPU case" << endl;
-	assembly_mat_gpu(&A, u);
+	assembly_mat_gpu(&A_gpu, u);
 #endif
 
 	auto time_3 = high_resolution_clock::now();
 
+#ifdef CPU
+#ifdef GPU
+        //assert (!ell_compare(&A_cpu, &A_gpu));
+        //assert (0);
+#endif
+#endif
+
 	delete [] u;
-	ell_free(&A);
+
+#ifdef CPU
+	ell_free(&A_cpu);
+#endif
+#ifdef GPU
+	ell_free(&A_gpu);
+#endif
 
 	auto duration = duration_cast<milliseconds>(time_2 - time_1);
 	cout << "time_init = " << duration.count() << " ms" << endl;

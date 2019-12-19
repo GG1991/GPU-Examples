@@ -140,11 +140,11 @@ void assembly_mat_gpu(ell_matrix *A, const double *u)
 
 	dim3 grid(4,4,4);
 	dim3 block(64,64,64);
-	get_elem_mats_gpu<<<grid, block>>>(Ae_arr_d, ctan_arr);
-	//get_elem_mats_cpu(Ae_arr_d, ctan_arr); 
+	//get_elem_mats_gpu<<<grid, block>>>(Ae_arr_d, ctan_arr);
+	get_elem_mats_cpu(Ae_arr_d, ctan_arr);
 
-	cudaMemcpy(&Ae_arr, &Ae_arr_d, 
-			ne * NPEDIM2 * sizeof(double), cudaMemcpyDeviceToHost);
+	//cudaMemcpy(&Ae_arr, &Ae_arr_d, 
+	//		ne * NPEDIM2 * sizeof(double), cudaMemcpyDeviceToHost);
 	cudaFree(Ae_arr_d);
 
 	double Ae[NPE * DIM * NPE * DIM];

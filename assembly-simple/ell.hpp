@@ -74,6 +74,7 @@ void ell_add_3D(ell_matrix *m, int ex, int ey, int ez, const double *Ae);
 void ell_set_zero_mat(ell_matrix *m);
 void ell_set_bc_2D(ell_matrix *m);
 void ell_set_bc_3D(ell_matrix *m);
+int ell_compare(const ell_matrix *m1, const ell_matrix *m2);
 void ell_free(ell_matrix *m);
 
 double get_norm(const double *vector, const int n);
