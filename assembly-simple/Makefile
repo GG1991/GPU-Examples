@@ -1,12 +1,13 @@
-all: gcc-debug gcc-opt
+all: main-debug main-opt
 
-gcc: gcc-debug gcc-opt
+main-debug: main.cpp ell.cpp
+	nvcc main.cpp ell.cpp -o main-debug -I . -std=c++11
 
-gcc-debug:
-	g++ -ggdb -fsanitize=address main.cpp ell.cpp -o main-gcc-debug -I .
+main-opt: main.cpp ell.cpp assembly.cu
+	nvcc -O3 main.cpp ell.cpp assembly.cu -o main-opt -I . -std=c++11
 
-gcc-opt:
-	g++ -O3 main.cpp ell.cpp -o main-gcc-opt -I .
+clean:
+	rm -f main-opt main-debug
 
 #pgi: pgi-cpu pgi-gpu
 #

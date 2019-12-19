@@ -3,14 +3,11 @@
 #include <chrono>
 #include <bits/stdc++.h>
 
+#include "vars.hpp"
 #include "ell.hpp"
 
 using namespace std;
 using namespace std::chrono;
-
-#define NPE 8
-#define NVOI 6
-#define DIM 3
 
 int nex, ney, nez;
 int nx, ny, nz;
