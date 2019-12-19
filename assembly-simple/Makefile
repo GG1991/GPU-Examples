@@ -1,7 +1,7 @@
 all: main-debug main-opt
 
-main-debug: main.cpp ell.cpp
-	nvcc main.cpp ell.cpp -o main-debug -I . -std=c++11
+main-debug: main.cpp ell.cpp assembly.cu
+	nvcc main.cpp ell.cpp assembly.cu -o main-debug -I . -std=c++11
 
 main-opt: main.cpp ell.cpp assembly.cu
 	nvcc -O3 main.cpp ell.cpp assembly.cu -o main-opt -I . -std=c++11

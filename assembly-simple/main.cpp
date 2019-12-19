@@ -14,6 +14,8 @@ int nx, ny, nz;
 
 double bmat_cache[NPE][NVOI][NPE * DIM];
 
+struct CUDA_vars CUDA_vars_h;
+
 void get_ctan(const double *eps, double *ctan, const double *history_params)
 {
 	const double lambda = 1.0e1;
@@ -166,6 +168,10 @@ int main(int argc, char **argv)
 	const int npedim2 = npedim * npedim;
 	const int nndim = nx * ny * nz * DIM;
 
+	CUDA_vars_h.nex = nex;
+	CUDA_vars_h.ney = ney;
+	CUDA_vars_h.nez = nez;
+
 	double * u = new double[nndim];
 
 	ell_matrix A;  // Matrix
@@ -174,7 +180,8 @@ int main(int argc, char **argv)
 
 	auto time_2 = high_resolution_clock::now();
 
-	assembly_mat(&A, u);
+	//assembly_mat(&A, u);
+	assembly_mat_gpu(&A, u);
 
 	auto time_3 = high_resolution_clock::now();
 
