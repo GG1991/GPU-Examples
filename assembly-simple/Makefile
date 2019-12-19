@@ -1,10 +1,10 @@
-all: main-debug main-opt
+all: main-cpu main-gpu
 
-main-debug: main.cpp ell.cpp assembly.cu
-	nvcc main.cpp ell.cpp assembly.cu -o main-debug -I . -std=c++11
+main-cpu: main.cpp ell.cpp assembly.cu
+	nvcc -O3 main.cpp ell.cpp assembly.cu -o main-cpu -I . -std=c++11
 
-main-opt: main.cpp ell.cpp assembly.cu
-	nvcc -O3 main.cpp ell.cpp assembly.cu -o main-opt -I . -std=c++11
+main-gpu: main.cpp ell.cpp assembly.cu
+	nvcc -O3 main.cpp ell.cpp assembly.cu -o main-gpu -I . -std=c++11 -DGPU
 
 clean:
 	rm -f main-opt main-debug

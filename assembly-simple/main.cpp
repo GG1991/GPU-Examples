@@ -153,9 +153,6 @@ int main(int argc, char **argv)
 
 	const int n = atoi(argv[1]);
 
-	//const int nex = n;
-	//const int ney = n;
-	//const int nez = n;
 	nex = n;
 	ney = n;
 	nez = n;
@@ -180,8 +177,13 @@ int main(int argc, char **argv)
 
 	auto time_2 = high_resolution_clock::now();
 
-	//assembly_mat(&A, u);
+#ifndef GPU
+	cout << "CPU case" << endl;
+	assembly_mat(&A, u);
+#else
+	cout << "GPU case" << endl;
 	assembly_mat_gpu(&A, u);
+#endif
 
 	auto time_3 = high_resolution_clock::now();
 
