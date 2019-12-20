@@ -32,4 +32,5 @@ void get_elem_nodes(int n[NPE], const int nx, const int ny, const int nz, int ex
 
 void get_ctan(const double *eps, double *ctan, const double *history_params);
 
-void assembly_mat_gpu(ell_matrix *A, const double *u);
+void assembly_mat_new_cpu(ell_matrix *A, const double *u);
+void assembly_mat_new_gpu(ell_matrix *A, const double *u);

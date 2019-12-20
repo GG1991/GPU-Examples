@@ -152,11 +152,13 @@ void ell_init(ell_matrix *m, const int nfield, const int dim, const int ns[3],
 int ell_compare(const ell_matrix *m1, const ell_matrix *m2)
 {
 	// 0 if are equal, 1 if not.
-	for (int i = 0; i < m1->nrow; i++) {
-		for (int j = 0; j < m1->nnz; j++){
-			if (fabs(m1->vals[i * m1->nnz + j] - m2->vals[i * m1->nnz + j]) < 1.0e-3)
-				return 1;
-		}
+
+	if (m1->nrow != m2->nrow) return 1;
+	if (m1->nnz != m2->nnz) return 2;
+
+	for (int i = 0; i < m1->nrow * m1->nnz; i++) {
+		if (fabs(m1->vals[i] - m2->vals[i]) > 1.0e-5) return i;
+		if (m1->cols[i] != m2->cols[i]) return 4;
 	}
 	return 0;
 }

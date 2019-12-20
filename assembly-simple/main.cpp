@@ -138,7 +138,7 @@ void assembly_mat(ell_matrix *A, const double *u)
 			}
 		}
 	}
-	ell_set_bc_3D(A);
+	//ell_set_bc_3D(A);
 }
 
 
@@ -165,16 +165,31 @@ int main(int argc, char **argv)
 	const int npedim2 = npedim * npedim;
 	const int nndim = nx * ny * nz * DIM;
 
-	CUDA_vars_h.nex = nex;
-	CUDA_vars_h.ney = ney;
-	CUDA_vars_h.nez = nez;
-
 	double * u = new double[nndim];
 
 	const int ns[DIM] = { nx, ny, nz };
+
+	for (int i = 0; i < NPE; ++i) {
+		for (int j = 0; j < NVOI; ++j) {
+			for (int k = 0; k < NPE * DIM; ++k) {
+				bmat_cache[i][j][k] = 1.0;
+			}
+		}
+	}
+
+	CUDA_vars_h.nex = nex;
+	CUDA_vars_h.ney = ney;
+	CUDA_vars_h.nez = nez;
+	memcpy(&CUDA_vars_h.bmat_cache, bmat_cache,
+	       NPE * NVOI * NPE * DIM * sizeof(double));
+
 #ifdef CPU
 	ell_matrix A_cpu;  // Matrix
 	ell_init(&A_cpu, DIM, DIM, ns, CG_ABS_TOL, CG_REL_TOL, CG_MAX_ITS);
+#endif
+#ifdef CPUNEW
+	ell_matrix A_cpunew;  // Matrix
+	ell_init(&A_cpunew, DIM, DIM, ns, CG_ABS_TOL, CG_REL_TOL, CG_MAX_ITS);
 #endif
 #ifdef GPU
 	ell_matrix A_gpu;  // Matrix
@@ -186,17 +201,41 @@ int main(int argc, char **argv)
 #ifdef CPU
 	cout << "CPU case" << endl;
 	assembly_mat(&A_cpu, u);
+	for (int i = 0; i < 0 + A_cpu.nnz; ++i)
+		cout << A_cpu.vals[i] << " ";
+	cout << endl;
+#endif
+#ifdef CPUNEW
+	cout << "CPU NEW case" << endl;
+	assembly_mat_new_cpu(&A_cpunew, u);
+	for (int i = 0; i < 0 + A_cpunew.nnz; ++i)
+		cout << A_cpunew.vals[i] << " ";
+	cout << endl;
 #endif
 #ifdef GPU
 	cout << "GPU case" << endl;
-	assembly_mat_gpu(&A_gpu, u);
+	assembly_mat_new_gpu(&A_gpu, u);
+	for (int i = 0; i < 0 + A_gpu.nnz; ++i)
+		cout << A_gpu.vals[i] << " ";
+	cout << endl;
 #endif
 
 	auto time_3 = high_resolution_clock::now();
 
 #ifdef CPU
+#ifdef CPUNEW
+	cout << "Evaluating assert CPU vs CPUNEW" << endl;
+	cout << " ell_compare: " << ell_compare(&A_cpu, &A_cpunew) << endl;
+        assert (!ell_compare(&A_cpu, &A_cpunew));
+        //assert (0);
+#endif
+#endif
+
+#ifdef CPU
 #ifdef GPU
-        //assert (!ell_compare(&A_cpu, &A_gpu));
+	cout << "Evaluating assert CPU vs GPU" << endl;
+	cout << " ell_compare: " << ell_compare(&A_cpu, &A_gpu) << endl;
+        assert (!ell_compare(&A_cpu, &A_gpu));
         //assert (0);
 #endif
 #endif
@@ -205,6 +244,9 @@ int main(int argc, char **argv)
 
 #ifdef CPU
 	ell_free(&A_cpu);
+#endif
+#ifdef CPUNEW
+	ell_free(&A_cpunew);
 #endif
 #ifdef GPU
 	ell_free(&A_gpu);
