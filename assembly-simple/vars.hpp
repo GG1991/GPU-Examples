@@ -21,8 +21,6 @@ struct CUDA_vars {
 
 };
 
-extern struct CUDA_vars CUDA_vars_h;
-
 void get_strain(const double *u, int gp, double *strain_gp,
 		int ex, int ey, int ez);
 
@@ -32,5 +30,7 @@ void get_elem_nodes(int n[NPE], const int nx, const int ny, const int nz, int ex
 
 void get_ctan(const double *eps, double *ctan, const double *history_params);
 
-void assembly_mat_new_cpu(ell_matrix *A, const double *u);
-void assembly_mat_new_gpu(ell_matrix *A, const double *u);
+void assembly_mat_new_cpu(ell_matrix *A, const double *u, 
+			  CUDA_vars *CUDA_vars_h);
+void assembly_mat_new_gpu(ell_matrix *A, const double *u,
+			  CUDA_vars *CUDA_vars_h);

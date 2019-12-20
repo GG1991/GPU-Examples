@@ -33,7 +33,6 @@ int main() {
 		}
 	}
 
-	cudaMemcpy(&CUDA_vars_d, &CUDA_vars_h,
-		       	sizeof(CUDA_vars), cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(&CUDA_vars_d, &CUDA_vars_h, sizeof(CUDA_vars));
 
 }

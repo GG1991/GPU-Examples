@@ -12,8 +12,8 @@ main-cpunew: main.cpp ell.cpp assembly.cu
 	#nvcc -g main.cpp ell.cpp assembly.cu -o $@ -I . -std=c++11 -DCPUNEW
 
 main-gpu: main.cpp ell.cpp assembly.cu
-	#nvcc -O3 main.cpp ell.cpp assembly.cu -o $@ -I . -std=c++11 -DGPU
-	nvcc -g main.cpp ell.cpp assembly.cu -o $@ -I . -std=c++11 -DGPU
+	nvcc -O3 main.cpp ell.cpp assembly.cu -o $@ -I . -std=c++11 -DGPU
+	#nvcc -g main.cpp ell.cpp assembly.cu -o $@ -I . -std=c++11 -DGPU
 
 
 

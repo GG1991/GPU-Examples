@@ -14,7 +14,6 @@ int nx, ny, nz;
 
 double bmat_cache[NPE][NVOI][NPE * DIM];
 
-struct CUDA_vars CUDA_vars_h;
 
 void get_ctan(const double *eps, double *ctan, const double *history_params)
 {
@@ -177,11 +176,14 @@ int main(int argc, char **argv)
 		}
 	}
 
+	struct CUDA_vars CUDA_vars_h;
+
 	CUDA_vars_h.nex = nex;
 	CUDA_vars_h.ney = ney;
 	CUDA_vars_h.nez = nez;
 	memcpy(&CUDA_vars_h.bmat_cache, bmat_cache,
 	       NPE * NVOI * NPE * DIM * sizeof(double));
+
 
 #ifdef CPU
 	ell_matrix A_cpu;  // Matrix
@@ -207,14 +209,14 @@ int main(int argc, char **argv)
 #endif
 #ifdef CPUNEW
 	cout << "CPU NEW case" << endl;
-	assembly_mat_new_cpu(&A_cpunew, u);
+	assembly_mat_new_cpu(&A_cpunew, u, &CUDA_vars_h);
 	for (int i = 0; i < 0 + A_cpunew.nnz; ++i)
 		cout << A_cpunew.vals[i] << " ";
 	cout << endl;
 #endif
 #ifdef GPU
 	cout << "GPU case" << endl;
-	assembly_mat_new_gpu(&A_gpu, u);
+	assembly_mat_new_gpu(&A_gpu, u, &CUDA_vars_h);
 	for (int i = 0; i < 0 + A_gpu.nnz; ++i)
 		cout << A_gpu.vals[i] << " ";
 	cout << endl;

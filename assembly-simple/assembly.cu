@@ -2,17 +2,23 @@
 #include "ell.hpp"
 #include "vars.hpp"
 
-__device__ struct CUDA_vars CUDA_vars_d;
+#define cudaCheckError() { \
+         cudaError_t e=cudaGetLastError(); \
+	 if(e!=cudaSuccess) { \
+		    printf("Cuda failure %s:%d: '%s'\n",__FILE__,__LINE__,cudaGetErrorString(e)); \
+		    exit(0); \
+		  } \
+}
 
-
-void get_elem_mats_cpu(double *Ae_arr, const double *ctan_arr)
+void get_elem_mats_cpu(double *Ae_arr, const double *ctan_arr,
+		       CUDA_vars *CUDA_vars_h)
 {
 	const double wg = 0.25;
 	const int npedim = NPE * DIM;
 	const int npedim2 = npedim * npedim;
-	const int nex = CUDA_vars_h.nex;
-	const int ney = CUDA_vars_h.ney;
-	const int nez = CUDA_vars_h.nez;
+	const int nex = CUDA_vars_h->nex;
+	const int ney = CUDA_vars_h->ney;
+	const int nez = CUDA_vars_h->nez;
 
 	for (int ex = 0; ex < nex; ++ex) {
 		for (int ey = 0; ey < ney; ++ey) {
@@ -29,7 +35,7 @@ const double *ctan = &ctan_arr[glo_elem(ex,ey,ez) * NPE * NVOI2
 				double tmp = 0.0;
 				for (int k = 0; k < NVOI; ++k)
 					tmp += ctan[i * NVOI + k] 
-						* CUDA_vars_h.bmat_cache[gp][k][j];
+						* CUDA_vars_h->bmat_cache[gp][k][j];
 				cxb[i][j] = tmp * wg;
 			}
 		}
@@ -37,7 +43,7 @@ const double *ctan = &ctan_arr[glo_elem(ex,ey,ez) * NPE * NVOI2
 		for (int m = 0; m < NVOI; ++m) {
 			for (int i = 0; i < npedim; ++i) {
 				const int inpedim = i * npedim;
-				const double bmatmi = CUDA_vars_h.bmat_cache[gp][m][i];
+				const double bmatmi = CUDA_vars_h->bmat_cache[gp][m][i];
 				for (int j = 0; j < npedim; ++j)
 					TAe[inpedim + j] += bmatmi * cxb[m][j];
 			}
@@ -51,14 +57,15 @@ const double *ctan = &ctan_arr[glo_elem(ex,ey,ez) * NPE * NVOI2
 }
 
 __global__
-void get_elem_mats_gpu(double *Ae_arr, const double *ctan_arr)
+void get_elem_mats_gpu(double *Ae_arr, const double *ctan_arr, 
+		       CUDA_vars *CUDA_vars_d)
 {
 	const double wg = 0.25;
 	const int npedim = NPE * DIM;
 	const int npedim2 = npedim * npedim;
-	const int nex = CUDA_vars_d.nex;
-	const int ney = CUDA_vars_d.ney;
-	const int nez = CUDA_vars_d.nez;
+	const int nex = CUDA_vars_d->nex;
+	const int ney = CUDA_vars_d->ney;
+	const int nez = CUDA_vars_d->nez;
 
 	int ex_t = threadIdx.x + blockDim.x * blockIdx.x;
 	int ey_t = threadIdx.y + blockDim.y * blockIdx.y;
@@ -82,7 +89,7 @@ void get_elem_mats_gpu(double *Ae_arr, const double *ctan_arr)
 				double tmp = 0.0;
 				for (int k = 0; k < NVOI; ++k)
 					tmp += ctan[i * NVOI + k] 
-						* CUDA_vars_d.bmat_cache[gp][k][j];
+						* CUDA_vars_d->bmat_cache[gp][k][j];
 				cxb[i][j] = tmp * wg;
 			}
 		}
@@ -90,7 +97,7 @@ void get_elem_mats_gpu(double *Ae_arr, const double *ctan_arr)
 		for (int m = 0; m < NVOI; ++m) {
 			for (int i = 0; i < npedim; ++i) {
 				const int inpedim = i * npedim;
-				const double bmatmi = CUDA_vars_d.bmat_cache[gp][m][i];
+				const double bmatmi = CUDA_vars_d->bmat_cache[gp][m][i];
 				for (int j = 0; j < npedim; ++j)
 					TAe[inpedim + j] += bmatmi * cxb[m][j];
 			}
@@ -103,13 +110,14 @@ void get_elem_mats_gpu(double *Ae_arr, const double *ctan_arr)
 	}
 }
 
-void assembly_mat_new_cpu(ell_matrix *A, const double *u)
+void assembly_mat_new_cpu(ell_matrix *A, const double *u, 
+			  CUDA_vars *CUDA_vars_h)
 {
 	ell_set_zero_mat(A);
 
-	const int nex = CUDA_vars_h.nex;
-	const int ney = CUDA_vars_h.ney;
-	const int nez = CUDA_vars_h.nez;
+	const int nex = CUDA_vars_h->nex;
+	const int ney = CUDA_vars_h->ney;
+	const int nez = CUDA_vars_h->nez;
 	const int ne = nex * ney * nez;
 
 	double *ctan_arr = new double[ne * NPE * NVOI2];
@@ -130,7 +138,7 @@ void assembly_mat_new_cpu(ell_matrix *A, const double *u)
 
 	double *Ae_arr = new double[ne * NPEDIM2];
 
-	get_elem_mats_cpu(Ae_arr, ctan_arr);
+	get_elem_mats_cpu(Ae_arr, ctan_arr, CUDA_vars_h);
 
 	for (int ex = 0; ex < nex; ++ex) {
 		for (int ey = 0; ey < ney; ++ey) {
@@ -148,16 +156,19 @@ void assembly_mat_new_cpu(ell_matrix *A, const double *u)
 }
 
 
-void assembly_mat_new_gpu(ell_matrix *A, const double *u)
+void assembly_mat_new_gpu(ell_matrix *A, const double *u,
+			  CUDA_vars *CUDA_vars_h)
 {
 	ell_set_zero_mat(A);
+	CUDA_vars *CUDA_vars_d;
 
-	cudaMemcpy(&CUDA_vars_d, &CUDA_vars_h,
-		       	sizeof(CUDA_vars), cudaMemcpyHostToDevice);
+	cudaMalloc((void **)&CUDA_vars_d, sizeof(CUDA_vars));
+	cudaMemcpy(CUDA_vars_d, CUDA_vars_h, sizeof(CUDA_vars),
+		   cudaMemcpyHostToDevice);
 
-	const int nex = CUDA_vars_h.nex;
-	const int ney = CUDA_vars_h.ney;
-	const int nez = CUDA_vars_h.nez;
+	const int nex = CUDA_vars_h->nex;
+	const int ney = CUDA_vars_h->ney;
+	const int nez = CUDA_vars_h->nez;
 	const int ne = nex * ney * nez;
 
 	double *Ae_arr = new double[ne * NPEDIM2];
@@ -182,21 +193,22 @@ void assembly_mat_new_gpu(ell_matrix *A, const double *u)
 
 	cudaMalloc((void**)&Ae_arr_d, ne * NPEDIM2 * sizeof(double));
 	cudaMalloc((void**)&ctan_arr_d, ne * NPE * NVOI2 * sizeof(double));
-	cudaMemcpy(ctan_arr_d, 
-		   ctan_arr,
+	cudaMemcpy(ctan_arr_d, ctan_arr,
 		   ne * NPE * NVOI2 * sizeof(double), 
 		   cudaMemcpyHostToDevice);
 
-	dim3 grid(1,1,1);
-	dim3 block(16,16,16);
-	get_elem_mats_gpu<<<grid, block>>>(Ae_arr_d, ctan_arr_d);
-
+	dim3 grid(15, 15, 15);
+	dim3 block(8, 8, 8);
+	get_elem_mats_gpu<<<grid, block>>>(Ae_arr_d, ctan_arr_d, 
+					   CUDA_vars_h);
+        cudaCheckError();
 	cudaMemcpy(Ae_arr, Ae_arr_d, 
 		   ne * NPEDIM2 * sizeof(double),
 		   cudaMemcpyDeviceToHost);
 
 	cudaFree(Ae_arr_d);
 	cudaFree(ctan_arr_d);
+	cudaFree(CUDA_vars_d);
 
 	for (int ex = 0; ex < nex; ++ex) {
 		for (int ey = 0; ey < ney; ++ey) {
