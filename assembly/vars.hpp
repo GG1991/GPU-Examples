@@ -10,7 +10,6 @@
 #define NPEDIM (NPE * DIM)
 #define NPEDIM2 (NPEDIM * NPEDIM)
 
-
 #define glo_elem(ex,ey,ez)   ((ez) * (nex) * (ney) + (ey) * (nex) + (ex))
 
 struct CUDA_vars {
@@ -23,8 +22,5 @@ struct CUDA_vars {
 
 void assembly_mat(ell_matrix *A, const double *u, CUDA_vars *CUDA_vars_h);
 
-void assembly_mat_new_cpu(ell_matrix *A, const double *u, CUDA_vars *CUDA_vars_h);
-
 void assembly_mat_gpu(ell_matrix *A, const double *u, CUDA_vars *CUDA_vars_h);
 
-void assembly_mat_gpu_2(ell_matrix *A, const double *u, CUDA_vars *CUDA_vars_h);
