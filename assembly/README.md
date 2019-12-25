@@ -1,46 +1,40 @@
 # Complex Function
 
-This example corresponds to a simulation of the assembly of a ELLPACK format
-matrix typical of a Finite Element problem. Basically the code fills a large
-vector - that represents a large matrix - adding partial sums of small vectors -
-which represent small matrices.
+This example corresponds to a simulation of the assembly of a ELLPACK
+format matrix typical of a Finite Element problem. The code fills a
+large vector - representing a large matrix - with partial small
+vectors sum - representing small matrices.
 
 ## Prerequisites
 
 * GCC compiler (> 8.0.0)
-* PGI compiler (> 19.4)
+* CUDA Toolkit (> 9.0)
 
 ## Compile
 
-To compile for GCC check that `g++` is visible in your environment.
+To compile check that the CUDA wrapper `nvcc` is visible in your
+environment.
 
 ```
-make gcc-debug
-make gcc-opt
-make gcc  (to compile both)
+make 
 ```
 
-To compile for PGI CPU and GPU versiones check that `pgc++` is visible in your environment.
+## Run
+
+To execute just put the name a positive integer number as argument
+(recommended `1 < n < 120`). In a Power9 machine with V100
+Nvidia GPU:
 
 ```
-make pgi-cpu
-make pgi-gpu
-make pgi
-```
+$ ./main-cpu 100
+...
+time_init = 384 ms
+time_assembly = 16065 ms
 
-## Compilation and Run
-
-To execute just put the name a positive integer number as argument (recommended
-`1 < n < 120`). For example in a Power9 machine with V100 Nvidia GPU:
-
-```
-$ ./main-pgi-cpu 100
-time_init = 3 ms
-time_assembly = 21175 ms
-
-$ ./main-pgi-gpu 100
-time_init = 3 ms
-time_assembly = 3750 ms
+$ ./main-gpu 100
+...
+time_init = 377 ms
+time_assembly = 1534 ms
 ```
 
 ## Authors
