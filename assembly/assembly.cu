@@ -5,18 +5,12 @@
 #include "cuda_profiler_api.h"
 
 #define cudaCheckError() { \
-         cudaError_t e=cudaGetLastError(); \
-	 if(e!=cudaSuccess) { \
-		    printf("Cuda failure %s:%d: '%s'\n",__FILE__,__LINE__,cudaGetErrorString(e)); \
-		    exit(0); \
-		  } \
+cudaError_t e=cudaGetLastError(); \
+if(e != cudaSuccess) { \
+	printf("Cuda failure %s:%d: '%s'\n",__FILE__,__LINE__,cudaGetErrorString(e)); \
+	exit(0); \
+} \
 }
-
-#include <iostream>
-#include <chrono>
-using namespace std;
-using namespace std::chrono;
-
 
 #ifdef CPU
 void get_ctan(const double *eps, double *ctan, const double *history_params)
@@ -38,10 +32,10 @@ void get_ctan(const double *eps, double *ctan, const double *history_params)
 }
 
 
-void get_elem_nodes(int n[NPE], CUDA_vars *CUDA_vars_h, int ex, int ey, int ez)
+void get_elem_nodes(int n[NPE], Params *params_h, int ex, int ey, int ez)
 {
-	const int nx = CUDA_vars_h->nx;
-	const int ny = CUDA_vars_h->ny;
+	const int nx = params_h->nx;
+	const int ny = params_h->ny;
 	const int nxny = ny * nx;
 	const int n0 = ez * nxny + ey * nx + ex;
 	n[0] = n0;
@@ -59,11 +53,11 @@ void get_elem_nodes(int n[NPE], CUDA_vars *CUDA_vars_h, int ex, int ey, int ez)
 
 
 void get_elem_displ(const double *u, double elem_disp[NPE * DIM],
-	       	    CUDA_vars *CUDA_vars_h,
+	       	    Params *params_h,
 		    int ex, int ey, int ez)
 {
 	int n[NPE];
-	get_elem_nodes(n, CUDA_vars_h, ex, ey, ez);
+	get_elem_nodes(n, params_h, ex, ey, ez);
 
 	for (int i = 0 ; i < NPE; ++i) {
 		for (int d = 0; d < DIM; ++d) {
@@ -74,11 +68,10 @@ void get_elem_displ(const double *u, double elem_disp[NPE * DIM],
 
 
 void get_strain(const double *u, int gp, double *strain_gp,
-	       	CUDA_vars *CUDA_vars_h,
-		int ex, int ey, int ez)
+	       	Params *params_h, int ex, int ey, int ez)
 {
 	double elem_disp[NPE * DIM];
-	get_elem_displ(u, elem_disp, CUDA_vars_h, ex, ey, ez);
+	get_elem_displ(u, elem_disp, params_h, ex, ey, ez);
 
 	for (int i = 0; i < NVOI; ++i) {
 		strain_gp[i] = 0;
@@ -86,15 +79,14 @@ void get_strain(const double *u, int gp, double *strain_gp,
 
 	for (int v = 0; v < NVOI; ++v) {
 		for (int i = 0; i < NPE * DIM; ++i){
-			strain_gp[v] += CUDA_vars_h->bmat_cache[gp][v][i] * elem_disp[i];
+			strain_gp[v] += params_h->bmat_cache[gp][v][i] * elem_disp[i];
 		}
 	}
 }
 
 
 void get_elem_mat(const double *u, double Ae[NPE * DIM * NPE * DIM],
-	       	  CUDA_vars *CUDA_vars_h,
-		  int ex, int ey, int ez)
+	       	  Params *params_h, int ex, int ey, int ez)
 {
 	const double wg = 0.25;
 	double ctan[NVOI][NVOI];
@@ -106,7 +98,7 @@ void get_elem_mat(const double *u, double Ae[NPE * DIM * NPE * DIM],
 	for (int gp = 0; gp < NPE; ++gp) {
 
 		double eps[6];
-		get_strain(u, gp, eps, CUDA_vars_h, ex, ey, ez);
+		get_strain(u, gp, eps, params_h, ex, ey, ez);
 
 		get_ctan(eps, (double *)ctan, nullptr);
 
@@ -116,7 +108,7 @@ void get_elem_mat(const double *u, double Ae[NPE * DIM * NPE * DIM],
 			for (int j = 0; j < npedim; ++j) {
 				double tmp = 0.0;
 				for (int k = 0; k < NVOI; ++k)
-					tmp += ctan[i][k] * CUDA_vars_h->bmat_cache[gp][k][j];
+					tmp += ctan[i][k] * params_h->bmat_cache[gp][k][j];
 				cxb[i][j] = tmp * wg;
 			}
 		}
@@ -124,7 +116,7 @@ void get_elem_mat(const double *u, double Ae[NPE * DIM * NPE * DIM],
 		for (int m = 0; m < NVOI; ++m) {
 			for (int i = 0; i < npedim; ++i) {
 				const int inpedim = i * npedim;
-				const double bmatmi = CUDA_vars_h->bmat_cache[gp][m][i];
+				const double bmatmi = params_h->bmat_cache[gp][m][i];
 				for (int j = 0; j < npedim; ++j)
 					TAe[inpedim + j] += bmatmi * cxb[m][j];
 			}
@@ -133,19 +125,19 @@ void get_elem_mat(const double *u, double Ae[NPE * DIM * NPE * DIM],
 	memcpy(Ae, TAe, npedim2 * sizeof(double));
 }
 
-void assembly_mat(ell_matrix *A, const double *u, CUDA_vars *CUDA_vars_h)
+void assembly_mat(ell_matrix *A, const double *u, Params *params_h)
 {
 	ell_set_zero_mat(A);
 
-	const int nex = CUDA_vars_h->nex;
-	const int ney = CUDA_vars_h->ney;
-	const int nez = CUDA_vars_h->nez;
+	const int nex = params_h->nex;
+	const int ney = params_h->ney;
+	const int nez = params_h->nez;
 
 	double Ae[NPE * DIM * NPE * DIM];
 	for (int ex = 0; ex < nex; ++ex) {
 		for (int ey = 0; ey < ney; ++ey) {
 			for (int ez = 0; ez < nez; ++ez) {
-				get_elem_mat(u, Ae, CUDA_vars_h, ex, ey, ez);
+				get_elem_mat(u, Ae, params_h, ex, ey, ez);
 				ell_add_3D(A, ex, ey, ez, Ae);
 			}
 		}
@@ -177,8 +169,10 @@ void get_ctan_d(const double *eps, double *ctan, const double *history_params)
 
 
 __device__
-void get_elem_nodes_d(int n[NPE], const int nx, const int ny, const int nz, int ex, int ey, int ez)
+void get_elem_nodes_d(int n[NPE], Params *params_d, int ex, int ey, int ez)
 {
+	const int nx = params_d->nx;
+	const int ny = params_d->ny;
 	const int nxny = ny * nx;
 	const int n0 = ez * nxny + ey * nx + ex;
 	n[0] = n0;
@@ -196,10 +190,11 @@ void get_elem_nodes_d(int n[NPE], const int nx, const int ny, const int nz, int 
 
 
 __device__
-void get_elem_displ_d(const double *u, double elem_disp[NPE * DIM], const int nx, const int ny, const int nz, int ex, int ey, int ez)
+void get_elem_displ_d(const double *u, double elem_disp[NPE * DIM], 
+		      Params *params_d, int ex, int ey, int ez)
 {
 	int n[NPE];
-	get_elem_nodes_d(n, nx, ny, nz, ex, ey, ez);
+	get_elem_nodes_d(n, params_d, ex, ey, ez);
 
 	for (int i = 0 ; i < NPE; ++i) {
 		for (int d = 0; d < DIM; ++d) {
@@ -211,14 +206,11 @@ void get_elem_displ_d(const double *u, double elem_disp[NPE * DIM], const int nx
 
 __device__
 void get_strain_d(const double *u, int gp, double *strain_gp,
-	       	CUDA_vars *CUDA_vars_d,
-		int ex, int ey, int ez)
+	       	  Params *params_d, int ex, int ey, int ez)
 {
-	const int nx = CUDA_vars_d->nx;
-	const int ny = CUDA_vars_d->ny;
-	const int nz = CUDA_vars_d->nz;
 	double elem_disp[NPE * DIM];
-	get_elem_displ_d(u, elem_disp, nx, ny, nz, ex, ey, ez);
+
+	get_elem_displ_d(u, elem_disp, params_d, ex, ey, ez);
 
 	for (int i = 0; i < NVOI; ++i) {
 		strain_gp[i] = 0;
@@ -226,7 +218,7 @@ void get_strain_d(const double *u, int gp, double *strain_gp,
 
 	for (int v = 0; v < NVOI; ++v) {
 		for (int i = 0; i < NPE * DIM; ++i){
-			strain_gp[v] += CUDA_vars_d->bmat_cache[gp][v][i] * elem_disp[i];
+			strain_gp[v] += params_d->bmat_cache[gp][v][i] * elem_disp[i];
 		}
 	}
 }
@@ -293,14 +285,13 @@ void ell_add_3D_gpu(ell_matrix *m, double *vals_d, int ex, int ey, int ez, const
 
 
 __global__
-void assembly_kernel(ell_matrix *A_d, double *vals_d, const double *u,
-		       	 CUDA_vars *CUDA_vars_d)
+void assembly_kernel(ell_matrix *A_d, double *vals_d, const double *u, Params *params_d)
 {
 	const double wg = 0.25;
 	const int npedim = NPE * DIM;
-	const int nex = CUDA_vars_d->nex;
-	const int ney = CUDA_vars_d->ney;
-	const int nez = CUDA_vars_d->nez;
+	const int nex = params_d->nex;
+	const int ney = params_d->ney;
+	const int nez = params_d->nez;
 
 	int ex_t = threadIdx.x + blockDim.x * blockIdx.x;
 	int ey_t = threadIdx.y + blockDim.y * blockIdx.y;
@@ -317,7 +308,7 @@ void assembly_kernel(ell_matrix *A_d, double *vals_d, const double *u,
 
 		double eps[6];
 		double ctan[NVOI2];
-		get_strain_d(u, gp, eps, CUDA_vars_d, ex, ey, ez);
+		get_strain_d(u, gp, eps, params_d, ex, ey, ez);
 		get_ctan_d(eps, ctan, nullptr);
 		double cxb[NVOI][npedim];
 
@@ -326,7 +317,7 @@ void assembly_kernel(ell_matrix *A_d, double *vals_d, const double *u,
 				double tmp = 0.0;
 				for (int k = 0; k < NVOI; ++k)
 					tmp += ctan[i * NVOI + k] 
-						* CUDA_vars_d->bmat_cache[gp][k][j];
+						* params_d->bmat_cache[gp][k][j];
 				cxb[i][j] = tmp * wg;
 			}
 		}
@@ -334,7 +325,7 @@ void assembly_kernel(ell_matrix *A_d, double *vals_d, const double *u,
 		for (int m = 0; m < NVOI; ++m) {
 			for (int i = 0; i < npedim; ++i) {
 				const int inpedim = i * npedim;
-				const double bmatmi = CUDA_vars_d->bmat_cache[gp][m][i];
+				const double bmatmi = params_d->bmat_cache[gp][m][i];
 				for (int j = 0; j < npedim; ++j)
 					TAe[inpedim + j] += bmatmi * cxb[m][j];
 			}
@@ -347,50 +338,41 @@ void assembly_kernel(ell_matrix *A_d, double *vals_d, const double *u,
 }
 
 
-void assembly_mat_gpu(ell_matrix *A, const double *u,
-		        CUDA_vars *CUDA_vars_h)
+void assembly_mat_gpu(ell_matrix *A, const double *u, Params *params_h)
 {
 	cudaProfilerStart();
 	ell_set_zero_mat(A);
-	CUDA_vars *CUDA_vars_d;
 
-	cudaMalloc((void **)&CUDA_vars_d, sizeof(CUDA_vars));
-	cudaMemcpy(CUDA_vars_d, CUDA_vars_h, sizeof(CUDA_vars),
-		   cudaMemcpyHostToDevice);
-
-	const int nx = CUDA_vars_h->nx;
-	const int ny = CUDA_vars_h->ny;
-	const int nz = CUDA_vars_h->nz;
+	const int nx = params_h->nx;
+	const int ny = params_h->ny;
+	const int nz = params_h->nz;
 	const int nn = nx * ny * nz;
 
+	Params *params_d;
 	double *u_d;
 	double *vals_d;
 	ell_matrix *A_d;
 
+	cudaMalloc((void **)&params_d, sizeof(Params));
 	cudaMalloc((void**)&A_d, sizeof(ell_matrix));
 	cudaMalloc((void**)&vals_d, A->nnz * A->nrow * sizeof(double));
 	cudaMalloc((void**)&u_d, nn * DIM * sizeof(double));
-	cudaMemcpy(u_d, u,
-		   nn * DIM * sizeof(double), 
-		   cudaMemcpyHostToDevice);
-	cudaMemcpy(A_d, A,
-		   sizeof(ell_matrix), 
-		   cudaMemcpyHostToDevice);
+	cudaMemcpy(params_d, params_h, sizeof(Params), cudaMemcpyHostToDevice);
+	cudaMemcpy(u_d, u, nn * DIM * sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemcpy(A_d, A, sizeof(ell_matrix), cudaMemcpyHostToDevice);
 	cudaMemset(vals_d, 0, A->nnz * A->nrow * sizeof(double));
 
 	dim3 grid(15, 15, 15);
 	dim3 block(4, 4, 4);
-	assembly_kernel<<<grid, block>>>(A_d, vals_d, u_d, CUDA_vars_h);
+	assembly_kernel<<<grid, block>>>(A_d, vals_d, u_d, params_h);
         cudaCheckError();
 
-	cudaMemcpy(A->vals, vals_d, 
-		   A->nrow * A->nnz * sizeof(double),
-		   cudaMemcpyDeviceToHost);
+	cudaMemcpy(A->vals, vals_d, A->nrow * A->nnz * sizeof(double), cudaMemcpyDeviceToHost);
 
 	cudaFree(A_d);
 	cudaFree(vals_d);
 	cudaFree(u_d);
-	cudaFree(CUDA_vars_d);
+	cudaFree(params_d);
 
 	//ell_set_bc_3D(A);
 	cudaProfilerStop();

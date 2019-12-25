@@ -12,7 +12,7 @@
 
 #define glo_elem(ex,ey,ez)   ((ez) * (nex) * (ney) + (ey) * (nex) + (ex))
 
-struct CUDA_vars {
+struct Params {
 
 	int nex, ney, nez;
 	int nx, ny, nz;
@@ -20,7 +20,7 @@ struct CUDA_vars {
 
 };
 
-void assembly_mat(ell_matrix *A, const double *u, CUDA_vars *CUDA_vars_h);
+void assembly_mat(ell_matrix *A, const double *u, Params *params_h);
 
-void assembly_mat_gpu(ell_matrix *A, const double *u, CUDA_vars *CUDA_vars_h);
+void assembly_mat_gpu(ell_matrix *A, const double *u, Params *params_d);
 

@@ -9,12 +9,6 @@
 using namespace std;
 using namespace std::chrono;
 
-int nex, ney, nez;
-int nx, ny, nz;
-
-double bmat_cache[NPE][NVOI][NPE * DIM];
-
-
 int main(int argc, char **argv)
 {
 	auto time_1 = high_resolution_clock::now();
@@ -26,9 +20,9 @@ int main(int argc, char **argv)
 
 	const int n = atoi(argv[1]);
 
-	nex = n;
-	ney = n;
-	nez = n;
+	const int nex = n;
+	const int ney = n;
+	const int nez = n;
 
 	const int nx = nex + 1;
 	const int ny = ney + 1;
@@ -42,19 +36,19 @@ int main(int argc, char **argv)
 
 	const int ns[DIM] = { nx, ny, nz };
 
-	struct CUDA_vars CUDA_vars_h;
+	struct Params params_h;
 
 	for (int i = 0; i < NPE; ++i) {
 		for (int j = 0; j < NVOI; ++j) {
 			for (int k = 0; k < NPE * DIM; ++k) {
-				CUDA_vars_h.bmat_cache[i][j][k] = 1.0;
+				params_h.bmat_cache[i][j][k] = 1.0;
 			}
 		}
 	}
 
-	CUDA_vars_h.nex = nex;
-	CUDA_vars_h.ney = ney;
-	CUDA_vars_h.nez = nez;
+	params_h.nex = nex;
+	params_h.ney = ney;
+	params_h.nez = nez;
 
 #ifdef CPU
 	ell_matrix A_cpu;  // Matrix
@@ -69,7 +63,7 @@ int main(int argc, char **argv)
 
 #ifdef CPU
 	cout << "CPU case" << endl;
-	assembly_mat(&A_cpu, u, &CUDA_vars_h);
+	assembly_mat(&A_cpu, u, &params_h);
 	for (int i = 0; i < 0 + A_cpu.nnz; ++i)
 		cout << A_cpu.vals[i] << " ";
 	cout << endl;
@@ -77,7 +71,7 @@ int main(int argc, char **argv)
 
 #ifdef GPU
 	cout << "GPU case" << endl;
-	assembly_mat_gpu(&A_gpu, u, &CUDA_vars_h);
+	assembly_mat_gpu(&A_gpu, u, &params_h);
 	for (int i = 0; i < 0 + A_gpu.nnz; ++i)
 		cout << A_gpu.vals[i] << " ";
 	cout << endl;
