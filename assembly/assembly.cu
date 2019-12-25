@@ -364,7 +364,7 @@ void assembly_mat_gpu(ell_matrix *A, const double *u, Params *params_h)
 
 	dim3 grid(15, 15, 15);
 	dim3 block(4, 4, 4);
-	assembly_kernel<<<grid, block>>>(A_d, vals_d, u_d, params_h);
+	assembly_kernel<<<grid, block>>>(A_d, vals_d, u_d, params_d);
         cudaCheckError();
 
 	cudaMemcpy(A->vals, vals_d, A->nrow * A->nnz * sizeof(double), cudaMemcpyDeviceToHost);
