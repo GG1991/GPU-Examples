@@ -24,22 +24,24 @@ void reduce(const double *arr_d, double *g_res, const int n)
 
 int main()
 {
-	int grid = 1000;
+	int grid = 100000;
 	int blocks = 128;
 	int shared = 128 * sizeof(double);
 
 	int n = 1 << 22;
+	cout << "n = " << n << endl;
+
 	double *arr_h, *arr_d;
 	double *g_res_h, *g_res_d;
 	
 	arr_h = (double *)malloc(n * sizeof(double));
-	g_res_h = (double *)malloc(blocks * sizeof(double));
+	g_res_h = (double *)malloc(grid * sizeof(double));
 
-	cudaMalloc((void **)&g_res_d, blocks * sizeof(double));
+	cudaMalloc((void **)&g_res_d, grid * sizeof(double));
 	cudaMalloc((void **)&arr_d, n * sizeof(double));
 
 	for (int i = 0; i < n; ++i) {
-		arr_h[i] = 1.1;
+		arr_h[i] = 1.0;
 	}
 
 	cudaMemcpy(arr_d, arr_h, n * sizeof(double), cudaMemcpyHostToDevice);
@@ -48,10 +50,10 @@ int main()
 	reduce<<<grid, blocks, shared>>>(arr_d, g_res_d, n);
 	cout << "OK " << endl;
 
-	cudaMemcpy(g_res_h, g_res_d, blocks * sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(g_res_h, g_res_d, grid * sizeof(double), cudaMemcpyDeviceToHost);
 
 	double result = 0.0;
-	for (int i = 0; i < blocks; ++i) {
+	for (int i = 0; i < grid; ++i) {
 		result += g_res_h[i];
 	}
 	cout << "result = " << result << endl;

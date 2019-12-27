@@ -24,19 +24,21 @@ void dot_prod_kernel(const double *arr1_d, const double *arr2_d, double *g_res, 
 
 int main()
 {
-	int grid = 1000;
-	int blocks = 128;
-	int shared = 128 * sizeof(double);
+	int grid = 100000;
+	int blocks = 64;
+	int shared = 64 * sizeof(double);
 
 	int n = 1 << 22;
+	cout << "n = " << n << endl;
+
 	double *arr1_h, *arr2_h, *arr1_d, *arr2_d;
 	double *g_res_h, *g_res_d;
 	
 	arr1_h = (double *)malloc(n * sizeof(double));
 	arr2_h = (double *)malloc(n * sizeof(double));
-	g_res_h = (double *)malloc(blocks * sizeof(double));
+	g_res_h = (double *)malloc(grid * sizeof(double));
 
-	cudaMalloc((void **)&g_res_d, blocks * sizeof(double));
+	cudaMalloc((void **)&g_res_d, grid * sizeof(double));
 	cudaMalloc((void **)&arr1_d, n * sizeof(double));
 	cudaMalloc((void **)&arr2_d, n * sizeof(double));
 
@@ -50,10 +52,10 @@ int main()
 
 	dot_prod_kernel<<<grid, blocks, shared>>>(arr1_d, arr2_d, g_res_d, n);
 
-	cudaMemcpy(g_res_h, g_res_d, blocks * sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(g_res_h, g_res_d, grid * sizeof(double), cudaMemcpyDeviceToHost);
 
 	double result = 0.0;
-	for (int i = 0; i < blocks; ++i) {
+	for (int i = 0; i < grid; ++i) {
 		result += g_res_h[i];
 	}
 	cout << "result = " << result << endl;
