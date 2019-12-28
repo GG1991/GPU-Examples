@@ -1,0 +1,6 @@
+mvp-cpu
+mvp-acc
+mvp-cuda
+mvp-cpu-acc
+mvp-cpu-cuda
+*.o
