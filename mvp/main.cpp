@@ -9,9 +9,11 @@
 using namespace std;
 using namespace std::chrono;
 
+#ifdef CUDA
 __global__
 void ell_mvp_kernel(const ell_matrix *m_d, const double *vals_d,
 		    const int *cols_d, const double *x_d, double *y_d);
+#endif
 
 int vec_compare(const double *v1, const double *v2, const int n)
 {
@@ -96,8 +98,10 @@ int main(int argc, char **argv)
 	ell_matrix *m_d;
 	double *vals_d, *x_d, *y_d;
 	int *cols_d;
-	const int grid = 512;
-	const int block = 1024;
+	//const int grid = 1000;
+	//const int block = 1024;
+	dim3 grid(50000, 1, 1);
+	dim3 block(2, 128, 1);
 	cudaMalloc((void **)&m_d, sizeof(ell_matrix));
 	cudaMalloc((void **)&vals_d, A_cuda.nrow * A_cuda.nnz * sizeof(double));
 	cudaMalloc((void **)&cols_d, A_cuda.nrow * A_cuda.nnz * sizeof(int));

@@ -36,6 +36,41 @@ __global__
 void ell_mvp_kernel(const ell_matrix *m_d, const double *vals_d,
 		    const int *cols_d, const double *x_d, double *y_d)
 {
+	__shared__ double cache[2 * 128];
+	const unsigned int col = threadIdx.y; // 0 .. 127
+	
+	const unsigned int row1 = threadIdx.x + blockDim.x * blockIdx.x;
+	const unsigned int stride = gridDim.x * blockDim.x;
+
+	const unsigned int num_strides = m_d->nrow / stride + 1;
+
+	for (int row = row1; row < stride * num_strides; row += stride) {
+
+	const unsigned int ix = row * m_d->nnz + threadIdx.y;
+
+	if (row < m_d->nrow && col < m_d->nnz)
+	       	cache[blockDim.y * threadIdx.x + threadIdx.y] = vals_d[ix] * x_d[cols_d[ix]];
+	else
+	       	cache[blockDim.y * threadIdx.x + threadIdx.y] = 0.0;
+	__syncthreads();
+
+	for (unsigned int s = 1; s < blockDim.y; s *= 2) {
+		if (threadIdx.y % (2 * s) == 0 && threadIdx.y < m_d->nnz) {
+			cache[blockDim.y * threadIdx.x + threadIdx.y] += 
+			cache[blockDim.y * threadIdx.x + threadIdx.y + s];
+		}
+		__syncthreads();
+	}
+	//save result for this block on global memory
+	if (threadIdx.y == 0 && row < m_d->nrow) y_d[row] = cache[blockDim.y * threadIdx.x];
+        }
+
+}
+
+__global__
+void ell_mvp_kernel1(const ell_matrix *m_d, const double *vals_d,
+		    const int *cols_d, const double *x_d, double *y_d)
+{
 	int it = threadIdx.x + blockDim.x * blockIdx.x;
 	int stride_x = blockDim.x * gridDim.x;
 
@@ -46,6 +81,36 @@ void ell_mvp_kernel(const ell_matrix *m_d, const double *vals_d,
 			tmp += vals_d[ix + j] * x_d[cols_d[ix + j]];
 		}
 		y_d[i] = tmp;
+	}
+}
+
+__global__
+void ell_mvp_kernel2(const ell_matrix *m_d, const double *vals_d,
+		    const int *cols_d, const double *x_d, double *y_d)
+{
+	extern __shared__ double cache[];
+	const int block_begin = blockDim.x * blockIdx.x;
+	const int block_end = block_begin + blockDim.x;
+	const int row = block_begin + threadIdx.x;
+
+	if (row < m_d->nrow) cache[threadIdx.x] = x_d[row];
+	__syncthreads();
+
+	if (row < m_d->nrow) {
+		double x_j;
+		double tmp = 0;
+		const int ix = row * m_d->nnz;
+		for (int col = ix; col < ix + m_d->nnz; col++) {
+		        const double val = vals_d[col];
+			const int j = cols_d[col];
+			if (j >= block_begin && j < block_end)
+				x_j = cache[j - block_begin];
+			else
+				x_j = x_d[j];
+
+			tmp += val * x_j;
+		}
+		y_d[row] = tmp;
 	}
 }
 
