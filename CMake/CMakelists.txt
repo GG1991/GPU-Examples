@@ -1,0 +1,8 @@
+project(cmake-test LANGUAGES CXX)
+
+option(ENABLE_CUDA "Enable CUDA" OFF)
+if(ENABLE_CUDA)
+  enable_language(CUDA)
+endif()
+
+add_executable(cmake-test 
