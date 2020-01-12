@@ -6,6 +6,6 @@ using namespace std;
 
 int function()
 {
-	cout << "Calling from function" << endl;
+	cout << "Hello World! from function" << endl;
 	return 0;
 }

@@ -5,6 +5,8 @@ main-pgi-cpu
 main-pgi-gpu
 
 *~
+*.out
+*.o
 
 main-*
 

@@ -7,8 +7,8 @@ main-cpu:
 
 main-cuda:
 	g++ -c main.cpp -o main-cu.o -DCUDA
-	nvcc -c func.cu -o func-cu.o
-	g++ main-cu.o func-cu.o -o main-cuda -lcudart
+	nvcc -x cu -c func.cu -o func-cu.o
+	g++ main-cu.o func-cu.o -o main-cuda -lcudart -lcuda
 
 clean:
 	rm -f main-cpu main-cuda *.o
