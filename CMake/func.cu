@@ -11,6 +11,7 @@ __global__
 void kernel(char *a, int *b) 
 {
 	a[threadIdx.x] += b[threadIdx.x];
+	small(2);
 }
 
 int function_cuda()
